@@ -3,13 +3,13 @@ use opencv::{
     highgui
 }; 
 
-use crate::entity_builder;
+
 use bevy_ecs::prelude as ecs;
 use uuid::Uuid;
 use crate::trackers::opencv_trackers::opencv_utilities::frame_component;
-use crate::trackers::opencv_trackers::OpencvTrackers;
 
-use crate::state::StateComponent;
+
+
 
 pub struct WindowPreviewBuilder{
 	pub setup: fn(&mut WindowPreview)
@@ -70,7 +70,7 @@ impl WindowPreview{
 	pub fn set_position(&mut self, x: i32, y: i32){
 		self.position.x = x;
 		self.position.y = y;
-		highgui::move_window(&self.id_str, x, y).unwrap();
+		highgui::move_window(&self.id_str, self.position.x, self.position.y).unwrap();
 	}
 
 	pub fn set_size(&mut self, width: i32, height: i32){
@@ -95,12 +95,12 @@ impl WindowPreview{
 		highgui::get_window_image_rect(&self.id_str)
 	}
 
-	pub fn get_position(&self) -> opencv::core::Point2i{
-		self.position.clone()
+	pub fn get_position(&self) -> &opencv::core::Point2i{
+		&self.position
 	}
 
-	pub fn get_size(&self) -> opencv::core::Size2i{
-		self.size.clone()
+	pub fn get_size(&self) -> &opencv::core::Size2i{
+		&self.size
 	}
 
 	
@@ -111,6 +111,9 @@ impl WindowPreview{
 }
 
 
+#[derive(ecs::Component)]
+pub struct WindowInLayout;
+
 #[derive(ecs::Component, Default)]
 pub struct WindowPreviewComponent{
 	pub window: WindowPreview,
@@ -118,9 +121,10 @@ pub struct WindowPreviewComponent{
 }
 
 impl WindowPreviewComponent {
-	pub fn window_preview_system(query: ecs::Query<(&WindowPreviewComponent, &frame_component::FrameComponent), ecs::Changed<frame_component::FrameComponent>>){
+	pub fn window_display_system(query: ecs::Query<(&WindowPreviewComponent, &frame_component::FrameComponent), ecs::Changed<frame_component::FrameComponent>>){
 		for (window_component, frame_component) in query.iter(){
 			let frame = frame_component.get_frame().lock().unwrap();
+			#[allow(unused_assignments)]
 			let mut result: opencv::Result<()> = Ok(());
 			if let Some(processing_function) = window_component.processing_function{
 			    let mut processed_frame = cv::Mat::default();
@@ -135,6 +139,29 @@ impl WindowPreviewComponent {
 
 			if let Err(err) = result{
 				println!("{}",err.message)
+			}
+		}
+	}
+	pub fn window_layout_system(
+		mut commands: ecs::Commands,
+		window_layout: Option<ecs::ResMut<crate::trackers::WindowLayout>>,
+		query: ecs::Query<(ecs::Entity, &WindowPreviewComponent), ecs::With<WindowInLayout>>
+	){
+		if let Some(mut layout) = window_layout {
+			for (entity, window_component) in query.iter(){
+				let position = layout.get_new_poition(window_component.window.get_size());
+
+				commands.add(
+					move |world: &mut ecs::World|{
+						if let Some(mut entity_mut) = world.get_entity_mut(entity){
+							if let Some(mut component) = entity_mut.get_mut::<WindowPreviewComponent>(){
+								component.window.set_position(position.x, position.y);
+							}
+							entity_mut.remove::<WindowInLayout>();
+						}
+					}
+				
+				);
 			}
 		}
 	}

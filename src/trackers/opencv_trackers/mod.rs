@@ -1,3 +1,4 @@
+pub mod camera;
 pub mod camera_observer;
 pub mod opencv_utilities;
 pub mod light_ball_trackers;
@@ -20,6 +21,7 @@ impl OpencvTrackers {
 
 pub fn setup_entities(schedule: &mut Schedule, world: &mut World) {
 	OpencvTrackers::init_stage(schedule)
+				.add_system(camera_observer::CameraObservers::assignment_system)
 				.add_system(camera_observer::CameraObservers::update_system);
 			
 	opencv_utilities::setup_entities(schedule, world);

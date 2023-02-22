@@ -1,3 +1,5 @@
+#![feature(drain_filter)]
+#![allow(dead_code)]
 use bevy_ecs::prelude::*;
 
 use system_startup::Application;
@@ -10,18 +12,8 @@ mod trackers;
 mod state;
 
 
-use linuxvideo::Device;
 
-fn list_device(device: Device) -> std::io::Result<()> {
-    let caps = device.capabilities()?;
-    println!("- {}: {}", device.path()?.display(), caps.card());
-    println!("  driver: {}", caps.driver());
-    println!("  bus info: {}", caps.bus_info());
-    println!("  all capabilities:    {:?}", caps.all_capabilities());
-    println!("  avail. capabilities: {:?}", caps.device_capabilities());
 
-    Ok(())
-}
 
 fn main() -> std::io::Result<()>{
 	let mut world = World::default();
@@ -34,15 +26,7 @@ fn main() -> std::io::Result<()>{
 	let mut app = Application::default();
 
 
-	for res in linuxvideo::list()? {
-        match res.and_then(|device| list_device(device)) {
-            Ok(()) => {}
-            Err(e) => {
-                eprintln!("skipping device due to error: {}", e);
-            }
-        }
-    }
-	//return Ok(());
+	
 	while app.run(&mut world, &mut schedule){
 		let resource = world.get_resource_mut::<system_startup::ApplicationControls>();
 		if resource.is_some() {

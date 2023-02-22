@@ -1,7 +1,7 @@
 use bevy_ecs::prelude as ecs;
 use bevy_ecs::query::With;
-use bevy_ecs::system::CommandQueue;
-use bevy_ecs::world;
+
+
 
 use opencv::prelude as cv;
 
@@ -23,64 +23,7 @@ use opencv_utilities::{
 };
 use std::any::type_name;
 
-pub struct LightBallTrackerBuilder;
-impl EntityBuilder for LightBallTrackerBuilder{
-	fn spawn(&self, command: &mut ecs::Commands) -> ecs::Entity{
-		let entity = command.spawn(()).id();
-
-		let mut window_component = window_preview::WindowPreviewComponent::default();
-		window_component.window.set_title(type_name::<LightBallTracker>());
-
-		command.entity(entity)
-			.insert((
-				tracker::TrackerData::default(),
-				LightBallTracker::default(),
-				frame_component::FrameComponent::default(),
-				window_component
-			));
-		command.init_resource::<CameraObservers>();
-		
-		return entity;
-	}
-	fn setup(&self, schedule: &mut ecs::Schedule, world: &mut ecs::World){
-		entity_builder::spawn_from_world(world, self);
-		if schedule.get_stage::<ecs::SystemStage>(CameraObserversLabel{}).is_none() {
-			
-			/*schedule.add_stage(CameraObserversLabel, ecs::SystemStage::parallel()
-				.with_system(CameraObservers::update_system)
-				.with_system(||{println!("Ping")})
-				.with_system(LightBallTracker::light_ball_tracker_update_system)
-
-			);*/
-
-			/*OpencvTrackers::init_stage(
-				schedule, 
-				|stage|{
-					stage
-						.add_system(CameraObservers::update_system)
-						.add_system(||{println!("Ping")})
-						.add_system(LightBallTracker::light_ball_tracker_update_system);
-				} 
-			);*/
-			OpencvTrackers::init_stage(schedule)
-				.add_system(||{println!("Ping")})
-				.add_system(LightBallTracker::light_ball_tracker_update_system); 
-			
-			
-			
-		}
-		/*use crate::tracker_impl::opencv_trackers::OpencvTrackers;
-		OpencvTrackers::init_stage(schedule, |stage|{
-			stage.
-			with_system(CameraObservers::update_system)
-			.with_system(||{println!("Ping")})
-			.with_system(LightBallTracker::light_ball_tracker_update_system);
-			}
-		);*/
-	}
-	
-}
-#[derive(ecs::StageLabel)]
+// ------- Light Ball Tracker Processing ------- //
 pub struct LightBallTrackerProcessingBuilder;
 impl EntityBuilder for LightBallTrackerProcessingBuilder{
 	fn spawn(&self, commands: &mut ecs::Commands) -> ecs::Entity{
@@ -96,23 +39,15 @@ impl EntityBuilder for LightBallTrackerProcessingBuilder{
 
 				// debug components
 				window_component,
+				window_preview::WindowInLayout
 			)
 		).id()
 	}
-	fn setup(&self, schedule: &mut ecs::Schedule, world: &mut ecs::World){
+	fn setup(&self, schedule: &mut ecs::Schedule, _world: &mut ecs::World){
 		OpencvTrackers::init_stage(schedule)
 			.add_system(LightBallTrackerProcessing::observer_subscribe_system);
-		/*
-		if schedule.get_stage::<ecs::SystemStage>(LightBallTrackerProcessingBuilder{}).is_none() {
-			schedule.add_stage(LightBallTrackerProcessingBuilder, ecs::SystemStage::parallel()
-				.with_system(LightBallTrackerProcessing::observer_subscribe_system)
-			);
-		}*/
 	}
 }
-
-
-
 
 #[derive(ecs::Component, Default)]
 struct LightBallTrackerProcessing;
@@ -123,8 +58,8 @@ impl LightBallTrackerProcessing {
 		camera_observers: Option<ecs::ResMut<CameraObservers>>,
 		query: ecs::Query<(ecs::Entity, &frame_component::FrameComponent), With<LightBallTrackerProcessing>>
 	){
-		if camera_observers.is_some(){
-			for camera_observer in  &mut camera_observers.unwrap().as_mut().list {
+		if let Some(mut observers) =  camera_observers {
+			for camera_observer in  &mut observers.list {
 				let mut any_subscribed = false;
 				for (entity, _) in query.iter() {
 					if camera_observer.is_subscribed(&entity){
@@ -163,6 +98,37 @@ impl LightBallTrackerProcessing {
 
 }
 
+// ------- Light Ball Tracker ------- //
+pub struct LightBallTrackerBuilder;
+impl EntityBuilder for LightBallTrackerBuilder{
+	fn spawn(&self, command: &mut ecs::Commands) -> ecs::Entity{
+		let entity = command.spawn(()).id();
+
+		let mut window_component = window_preview::WindowPreviewComponent::default();
+		window_component.window.set_title(type_name::<LightBallTracker>());
+		//window_component.window.set_position(500, 550)
+
+		command.entity(entity)
+			.insert((
+				tracker::TrackerData::default(),
+				LightBallTracker::default(),
+				frame_component::FrameComponent::default(),
+				window_component,
+				window_preview::WindowInLayout
+			));
+		
+		
+		return entity;
+	}
+	fn setup(&self, schedule: &mut ecs::Schedule, world: &mut ecs::World){
+		entity_builder::spawn_from_world(world, self);
+		OpencvTrackers::init_stage(schedule)
+			.add_system(||{println!("Ping")})
+			.add_system(LightBallTracker::light_ball_tracker_update_system); 		
+	}
+	
+}
+
 type Color3d = opencv::core::Vec3i;
 #[derive(ecs::Component, Default)]
 struct LightBallTracker{
@@ -198,7 +164,7 @@ impl LightBallTracker {
 		}
 	}
 	
-	fn compute_position(&mut self, frame: &cv::Mat, frame_mask: &cv::Mat) -> tracker::Position{
+	fn compute_position(&mut self, _frame: &cv::Mat, _frame_mask: &cv::Mat) -> tracker::Position{
 		
 		self.counter += 6.6;
 		let mut pos = tracker::Position::default();

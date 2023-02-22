@@ -9,6 +9,7 @@ use bevy_ecs::prelude::{
 
 pub fn setup_entities(schedule: &mut Schedule, _: &mut World){
 	OpencvTrackers::init_stage(schedule)
-			.add_system(window_preview::WindowPreviewComponent::window_preview_system);
+			.add_system(window_preview::WindowPreviewComponent::window_display_system)
+			.add_system(window_preview::WindowPreviewComponent::window_layout_system);
 	
 }

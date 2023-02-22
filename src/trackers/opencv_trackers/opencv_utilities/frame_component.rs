@@ -1,5 +1,3 @@
-use std::sync::MutexGuard;
-
 use opencv::prelude as cv;
 use bevy_ecs::prelude as ecs;
 

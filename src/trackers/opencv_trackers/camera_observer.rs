@@ -1,19 +1,17 @@
-
 use std::any::type_name;
-use std::result;
+
 
 use bevy_ecs::prelude::*;
 use bevy_ecs::world;
 
-use crate::trackers::tracker::*;
+use crate::entity_builder::EntityBuilder;
 use crate::state;
-
+use crate::trackers::opencv_trackers::camera;
 
 
 use opencv::{
     prelude::*,
-    videoio,
-    highgui
+    videoio
 }; 
 
 use crate::trackers::opencv_trackers::opencv_utilities::{
@@ -22,8 +20,6 @@ use crate::trackers::opencv_trackers::opencv_utilities::{
 };
 
 
-#[derive(StageLabel)]
-pub struct CameraObserversLabel;
 
 #[derive(Component)]
 pub struct CameraObserverSubscriberComponent;
@@ -48,38 +44,85 @@ impl CameraObservers{
 				for entity in &camera_observer.subscribed_entities {
 					let frame_component_result = query.get_mut(*entity);
 					if let Ok(mut frame_component) = frame_component_result {
-						frame_component.apply(&new_frame);
+						if let Ok(_) = frame_component.apply(&new_frame){
+							// get rid of warning(maybe handle this error)					
+						}
 					} 
-					
 				}
 				
 				//camera_observer.update();
 				
 			}
 		}
+		
+	}
+
+	pub fn assignment_system(mut commands:  Commands, camera_observers: Option<ResMut<CameraObservers>>){
+		if let Some(mut observers) =  camera_observers {
+			let mut  camera_list = camera::CameraDevice::list_unique_devices().unwrap();
+			for camera_observer in &mut observers.list{
+				if camera_list.contains_key(&camera_observer.bus){
+					camera_list.remove(&camera_observer.bus);
+				}
+				else if !camera_observer.state.is_done() {
+					let old_state= std::mem::replace(&mut camera_observer.state, state::State::None);
+					match old_state {
+						state::State::Start(result) => {
+							camera_observer.state = state::State::Stop(result);
+						},
+						state::State::Run(result) => {
+							camera_observer.state = state::State::Stop(result);
+						},
+						state::State::Stop(result) => {
+							camera_observer.state = state::State::Stop(result);
+						}
+						state::State::Done(result) => {
+							camera_observer.state = state::State::Done(result);
+						}
+						_ => {}
+					}
+				}
+
+				
+			}
+			for (bus , new_unassigned_camera) in camera_list{
+				let entity = CameraPreviewBuilder{}.spawn(&mut commands);
+				let mut camera = CameraObserver::default();
+				camera.bus = bus; 
+				camera.path = new_unassigned_camera.path;
+				camera.subscribed_entities.insert(entity);
+				commands.add(
+					move |world: &mut World| {
+						let mut observers_mut = world.get_resource_mut::<CameraObservers>().unwrap();
+						observers_mut.list.push(camera)
+					} 
+				);
+			}
+
+			commands.add(
+				move |world: &mut World| {
+					let mut observers_mut = world.get_resource_mut::<CameraObservers>().unwrap();
+
+					let removed_observers = observers_mut.list.drain_filter(|observer| observer.state.is_done()).collect::<Vec<_>>();
+					for observer in removed_observers.iter(){
+						for entity in observer.subscribed_entities.iter(){
+							world.despawn(entity.clone());
+						}
+					}
+				} 
+			);
+		}
+		else {
+			commands.init_resource::<CameraObservers>();
+		}
 	}
 
 }
 
 impl world::FromWorld for CameraObservers{
-	fn from_world(world: &mut World) -> Self {
-		let mut camera = CameraObserver::default();
+	fn from_world(_world: &mut World) -> Self {
 		
-		let window_builder = window_preview::WindowPreviewBuilder{
-			setup: |window: &mut window_preview::WindowPreview| {
-				window.set_title(type_name::<CameraObserver>());
-			}
-		};
-
-		let entity = world.spawn(
-			(
-				frame_component::FrameComponent::default(),
-				window_preview::WindowPreviewComponent{window: window_builder.build(), processing_function: None},
-				CameraObserverSubscriberComponent
-			)
-		);
-		camera.subscribed_entities.insert(entity.id());
-		CameraObservers{list: vec![camera]}
+		CameraObservers{list: vec![]}
 	}
 }
 
@@ -89,6 +132,8 @@ impl world::FromWorld for CameraObservers{
 #[derive(Default)]
 pub struct CameraObserver {
 	state: state::State<OpencvCameraObserver, opencv::Error>,
+	bus: String,
+	path: String,
 	subscribed_entities: std::collections::HashSet<Entity>
 }
 
@@ -110,9 +155,9 @@ impl CameraObserver{
 
 // private:
 
-	fn init_opencv_observer() -> opencv::Result<OpencvCameraObserver>{		
+	fn init_opencv_observer(filepath: &str) -> opencv::Result<OpencvCameraObserver>{		
 		// Open the web-camera (assuming you have one)
-		let mut camera = videoio::VideoCapture::from_file("/dev/video0", videoio::CAP_ANY)?; //videoio::VideoCapture::new(0, videoio::CAP_ANY)?;
+		let mut camera = videoio::VideoCapture::from_file(filepath, videoio::CAP_ANY)?; //videoio::VideoCapture::new(0, videoio::CAP_ANY)?;
 		camera.set(videoio::CAP_PROP_FRAME_WIDTH, 1024.)?;
 		camera.set(videoio::CAP_PROP_FRAME_HEIGHT,768.)?;
 		camera.set(videoio::CAP_PROP_FPS, 30.)?;
@@ -136,7 +181,7 @@ impl CameraObserver{
 				self.state.restart_with(Ok(OpencvCameraObserver::default()));
 			},
 			State::Start(_) => {
-				self.state.pass(CameraObserver::init_opencv_observer());
+				self.state.pass(CameraObserver::init_opencv_observer(&self.path));
 			},
 			State::Run(opencv_result) => {
 				let result = Self::update_frame(opencv_result.as_mut().unwrap(), frame);
@@ -177,4 +222,27 @@ impl Default for OpencvCameraObserver {
 	fn default() -> Self {
 		OpencvCameraObserver{video_capture: std::sync::Mutex::new(videoio::VideoCapture::default().unwrap())}
 	}
+}
+
+
+struct CameraPreviewBuilder;
+
+impl EntityBuilder for CameraPreviewBuilder{
+	fn spawn(&self, commands: &mut Commands) -> Entity {
+		let window_builder = window_preview::WindowPreviewBuilder{
+			setup: |window: &mut window_preview::WindowPreview| {
+				window.set_title(type_name::<CameraObserver>());
+			}
+		};
+		commands.spawn(
+			(
+				frame_component::FrameComponent::default(),
+				window_preview::WindowPreviewComponent{window: window_builder.build(), processing_function: None},
+				window_preview::WindowInLayout,
+				CameraObserverSubscriberComponent
+			)
+		).id()
+	}
+
+	fn setup(&self, _: &mut Schedule, _: &mut World) {}
 }
