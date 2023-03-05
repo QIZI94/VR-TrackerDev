@@ -1,9 +1,9 @@
 use bevy_ecs::prelude::*;
 #[derive(Default, Debug)]
 pub struct Position{
-	pub x: f32,
-	pub y: f32,
-	pub z: f32
+	pub x: f64,
+	pub y: f64,
+	pub z: f64
 }
 #[derive(Default)]
 pub struct Rotation(Position);
