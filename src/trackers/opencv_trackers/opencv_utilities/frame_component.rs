@@ -1,5 +1,5 @@
 use opencv::prelude as cv;
-use bevy_ecs::prelude as ecs;
+use bevy::ecs::prelude as ecs;
 
 pub type ProcessingFunction = fn(dest: &mut cv::Mat, src: &cv::Mat) -> opencv::Result<()>;
 

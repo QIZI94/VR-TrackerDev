@@ -1,4 +1,4 @@
-use bevy_ecs::prelude as ecs;
+use bevy::ecs::prelude as ecs;
 
 use opencv::prelude::MatTraitConstManual;
 use opencv::prelude::MatTraitConst;
@@ -6,11 +6,11 @@ use opencv::prelude as cv;
 use crate::trackers::opencv_trackers::light_ball_trackers::light_ball_tracker::window_preview::WindowPreviewComponent;
 
 
-use crate::entity_builder;
+use crate::entity_spawner;
 use crate::trackers::opencv_trackers::opencv_utilities;
 
 use crate::trackers::tracker;
-use crate::entity_builder::*;
+use crate::entity_spawner::*;
 use crate::state::*;
 
 use crate::trackers::opencv_trackers::OpencvTrackers;
@@ -47,7 +47,7 @@ impl LightBallTrackerBuilder {
 	}
 }
 
-impl EntityBuilder for LightBallTrackerBuilder{
+impl EntitySpawner for LightBallTrackerBuilder{
 	fn spawn(&self, command: &mut ecs::Commands) -> ecs::Entity{
 		let entity = command.spawn(()).id();
 
@@ -67,19 +67,22 @@ impl EntityBuilder for LightBallTrackerBuilder{
 		
 		return entity;
 	}
-	fn setup(&self, schedule: &mut ecs::Schedule, world: &mut ecs::World){
+}
+
+impl bevy::app::Plugin for LightBallTrackerBuilder{
+	fn build(&self, app: &mut bevy::prelude::App) {
+		let world = &mut app.world;
 		for color in &self.colors {
-			let light_ball = entity_builder::spawn_from_world(world, self);
+			let light_ball = entity_spawner::spawn_from_world(world, self);
 			if let Some(mut tracker) = world.entity_mut(light_ball).get_mut::<LightBallTracker>(){
 				tracker.color_range = color.clone();
 			}
 		}
 
-		OpencvTrackers::init_stage(schedule)
+		OpencvTrackers::init_schedule(app)
 			.add_system(||{println!("Ping")})
-			.add_system(LightBallTracker::light_ball_tracker_update_system); 		
+			.add_system(LightBallTracker::update_system); 		
 	}
-	
 }
 
 type Color3d = opencv::core::Vec3i;
@@ -92,7 +95,7 @@ pub struct LightBallTracker{
 }
 impl LightBallTracker {
 	
-	fn light_ball_tracker_update_system(
+	fn update_system(
 		mut commands: ecs::Commands,
 		frame_query: ecs::Query<&frame_component::FrameComponent, (ecs::With<light_ball_processing::LightBallTrackerProcessing>, ecs::Changed<frame_component::FrameComponent>)>,
 		mut tracker_query: ecs::Query<(ecs::Entity, &mut LightBallTracker, &mut frame_component::FrameComponent), ecs::Without<light_ball_processing::LightBallTrackerProcessing>>,

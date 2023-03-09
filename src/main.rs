@@ -1,27 +1,24 @@
 #![feature(drain_filter)]
 #![allow(dead_code)]
-use bevy_ecs::prelude::*;
 
-use system_startup::Application;
-
-mod system_startup;
-mod entity_builder;
+mod entity_spawner;
 mod trackers;
-
-
 mod state;
 
-
-
-
-
 fn main() -> std::io::Result<()>{
+
+	let mut app = bevy::app::App::new();
+	app
+		.add_plugins(bevy::MinimalPlugins)
+		.add_plugin(trackers::TrackersPlugin)
+		.run();
+	
+		
+/*
+
 	let mut world = World::default();
 	let mut schedule = Schedule::default();
-	//system_startup::setup_entities(&mut schedule, &mut world);
-	
-	/*schedule.add_stage("test", SystemStage::parallel()
-		.with_system(tracker::print_trackers_system));*/
+
 	
 	let mut app = Application::default();
 
@@ -45,6 +42,7 @@ fn main() -> std::io::Result<()>{
 			}
 		}
 	}
+	*/
 	Ok(())
 	
 }

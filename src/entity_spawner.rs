@@ -1,6 +1,6 @@
-use bevy_ecs::prelude::*;
-use bevy_ecs::system::CommandQueue;
-pub trait EntityBuilder{
+use bevy::ecs::prelude::*;
+use bevy::ecs::system::CommandQueue;
+pub trait EntitySpawner{
 	/// Spawn entity defined by EntityBuilder implementation with all it's neceserry components and resources.
     ///
     /// # Arguments
@@ -19,22 +19,6 @@ pub trait EntityBuilder{
     /// ```
 	fn spawn(&self, commands: &mut Commands) -> Entity;
 
-	/// Setups systems and other prerequisites used for components and resources of entity.
-    ///
-    /// # Arguments
-    ///
-    /// * `schedule` - used for attaching system functions for specific components and resource for this implementation
-    /// * `world` - used for immidiate startup entity spawning
-	/// 
-    /// # Examples
-    ///
-    /// ```
-    ///pub fn setup_entities(schedule: &mut Schedule, world: &mut World){
-	///    EntityBuilderImplementation{}.setup(schedule, world);
-	///    // ... setup other enities
-	///}
-    /// ```
-	fn setup(&self, schedule: &mut Schedule, world: &mut World);
 
 }
 
@@ -47,7 +31,7 @@ pub trait EntityBuilder{
 ///
 /// * `world` - used for immidiate startup entity spawning
 /// * `entity_builder` - (calls spawn(commands)) used for attaching system functions for specific components and resource for this implementation
-pub fn spawn_from_world(world: &mut World, entity_builder: &dyn EntityBuilder ) -> Entity{
+pub fn spawn_from_world(world: &mut World, entity_builder: &dyn EntitySpawner ) -> Entity{
 	let mut queue = CommandQueue::default();
 	let mut commands = Commands::new(&mut queue, world);
 	let entity = entity_builder.spawn(&mut commands);

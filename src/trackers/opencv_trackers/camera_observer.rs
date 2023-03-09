@@ -1,10 +1,10 @@
 use std::any::type_name;
 
 
-use bevy_ecs::prelude::*;
-use bevy_ecs::world;
+use bevy::ecs::prelude::*;
+use bevy::ecs::world;
 
-use crate::entity_builder::EntityBuilder;
+use crate::entity_spawner::EntitySpawner;
 use crate::state;
 use crate::trackers::opencv_trackers::camera;
 
@@ -227,7 +227,7 @@ impl Default for OpencvCameraObserver {
 
 struct CameraPreviewBuilder;
 
-impl EntityBuilder for CameraPreviewBuilder{
+impl EntitySpawner for CameraPreviewBuilder{
 	fn spawn(&self, commands: &mut Commands) -> Entity {
 		let window_builder = window_preview::WindowPreviewBuilder{
 			setup: |window: &mut window_preview::WindowPreview| {
@@ -243,6 +243,4 @@ impl EntityBuilder for CameraPreviewBuilder{
 			)
 		).id()
 	}
-
-	fn setup(&self, _: &mut Schedule, _: &mut World) {}
 }

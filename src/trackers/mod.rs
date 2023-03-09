@@ -1,9 +1,8 @@
 pub mod opencv_trackers;
 pub mod tracker;
 
-use bevy_ecs::prelude::{
-	Schedule, World, Resource
-};
+use bevy::ecs::prelude::Resource;
+
 
 use::opencv::core::{
 	Size2i, Point2i
@@ -61,11 +60,12 @@ impl WindowLayout {
 
 }
 
-
-
-pub fn setup_entities(schedule: &mut Schedule, world: &mut World){
-	opencv_trackers::OpencvTrackers::init_stage(schedule)
-		.add_system(tracker::print_trackers_system);
-	world.insert_resource(WindowLayout::new_with_origin(Size2i::new(2560, 1440), Point2i::new(30, 60)));
-	opencv_trackers::setup_entities(schedule, world);
+pub struct TrackersPlugin;
+impl bevy::app::Plugin for TrackersPlugin {
+	fn build(&self, app: &mut bevy::prelude::App) {
+		app
+			.add_system(tracker::print_trackers_system);
+		app.world.insert_resource(WindowLayout::new_with_origin(Size2i::new(2560, 1440), Point2i::new(30, 60)));
+		opencv_trackers::setup_entities(app);
+	}
 }

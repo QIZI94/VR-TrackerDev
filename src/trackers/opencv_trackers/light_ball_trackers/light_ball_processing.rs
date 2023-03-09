@@ -1,5 +1,5 @@
-use bevy_ecs::prelude as ecs;
-use bevy_ecs::query::With;
+use bevy::ecs::prelude as ecs;
+use bevy::ecs::query::With;
 
 
 
@@ -8,7 +8,7 @@ use opencv::prelude as cv;
 
 use crate::trackers::opencv_trackers::opencv_utilities;
 
-use crate::entity_builder::*;
+use crate::entity_spawner::*;
 use crate::trackers::opencv_trackers::camera_observer::*;
 
 
@@ -23,7 +23,7 @@ use std::any::type_name;
 
 // ------- Light Ball Tracker Processing ------- //
 pub struct LightBallTrackerProcessingBuilder;
-impl EntityBuilder for LightBallTrackerProcessingBuilder{
+impl EntitySpawner for LightBallTrackerProcessingBuilder{
 	fn spawn(&self, commands: &mut ecs::Commands) -> ecs::Entity{
 		let mut window_component = window_preview::WindowPreviewComponent::default();
 		window_component.processing_function = Some(LightBallTrackerProcessing::undo_preprocess_frame_color);
@@ -41,8 +41,11 @@ impl EntityBuilder for LightBallTrackerProcessingBuilder{
 			)
 		).id()
 	}
-	fn setup(&self, schedule: &mut ecs::Schedule, _world: &mut ecs::World){
-		OpencvTrackers::init_stage(schedule)
+}
+
+impl bevy::app::Plugin for LightBallTrackerProcessingBuilder{
+	fn build(&self, app: &mut bevy::prelude::App) {
+		OpencvTrackers::init_schedule(app)
 			.add_system(LightBallTrackerProcessing::observer_subscribe_system);
 	}
 }

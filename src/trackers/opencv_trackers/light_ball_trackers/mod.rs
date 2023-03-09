@@ -1,19 +1,16 @@
 pub mod light_ball_tracker;
 mod light_ball_processing;
-use bevy_ecs::prelude::{
-	Schedule, World
-};
+use bevy::app::Plugin;
 
-
-const SETUP_LIST:  &'static [&'static dyn  crate::entity_builder::EntityBuilder] = &[
+const SETUP_LIST:  &'static [&'static dyn  Plugin] = &[
 	&light_ball_tracker::LightBallTrackerBuilder::default(),
 	&light_ball_processing::LightBallTrackerProcessingBuilder,
 ];
 
-pub fn setup_entities(schedule: &mut Schedule, world: &mut World){
+pub fn setup_entities(app: &mut bevy::prelude::App){
 		
 	//world.init_resource()
 	for entity_builder in SETUP_LIST{
-		entity_builder.setup(schedule, world);
+		entity_builder.build(app);
 	}
 }

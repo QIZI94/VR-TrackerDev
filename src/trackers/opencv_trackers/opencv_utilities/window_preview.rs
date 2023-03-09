@@ -4,7 +4,7 @@ use opencv::{
 }; 
 
 
-use bevy_ecs::prelude as ecs;
+use bevy::ecs::prelude as ecs;
 use uuid::Uuid;
 use crate::trackers::opencv_trackers::opencv_utilities::frame_component;
 

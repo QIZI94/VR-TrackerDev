@@ -2,7 +2,7 @@ use std::{mem, fmt::Debug};
 
 
 
-use bevy_ecs::{prelude::Component};
+use bevy::ecs::{prelude::Component};
 
 
 pub type PreviousStateResult<T, E> = Result<T, E>;

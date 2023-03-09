@@ -1,4 +1,4 @@
-use bevy_ecs::prelude::*;
+use bevy::ecs::prelude::*;
 #[derive(Default, Debug)]
 pub struct Position{
 	pub x: f64,
