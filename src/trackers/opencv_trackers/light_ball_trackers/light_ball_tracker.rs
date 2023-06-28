@@ -77,6 +77,42 @@ impl bevy::app::Plugin for LightBallTrackerBuilder{
 			if let Some(mut tracker) = world.entity_mut(light_ball).get_mut::<LightBallTracker>(){
 				tracker.color_range = color.clone();
 			}
+			
+
+			let mut meshes = world.resource_mut::<bevy::prelude::Assets<bevy::prelude::Mesh>>();		
+			let mesh = meshes.add(bevy::prelude::Mesh::from(bevy::prelude::shape::Cube { size: 0.25 }));
+
+			let mut materials = world.resource_mut::<bevy::prelude::Assets<bevy::prelude::StandardMaterial>>();
+
+			let mut hue = color.color_lower.get(0).unwrap().clone();
+			let hue_upper = color.color_upper.get(0).unwrap().clone();
+			if (hue * 3.) > hue_upper{
+				hue = hue_upper;
+			}
+
+			let material = bevy::prelude::StandardMaterial {
+				base_color: bevy::prelude::Color::hsl(hue as f32, 1.0, 0.50),
+				unlit: true,
+				..Default::default()
+			};
+			let mut material_handle = materials.add(material);
+			
+			world.entity_mut(light_ball).insert(bevy::prelude::PbrBundle {
+				mesh: mesh,
+				material: material_handle,
+				transform: bevy::prelude::Transform::from_xyz(0.0, 0.5, 0.0),
+				..Default::default()
+			});
+
+			world.entity_mut(light_ball).insert(
+				bevy::pbr::PointLightBundle{
+					point_light: bevy::pbr::PointLight{
+						color: bevy::prelude::Color::hsl(hue as f32, 1.0, 0.50),
+						..Default::default()
+					},
+					..Default::default()
+				}
+			);
 		}
 
 		OpencvTrackers::init_schedule(app)
@@ -113,6 +149,10 @@ impl LightBallTracker {
 						if let Some(position) = tracker.compute_position(&screen_space, &mask.size().unwrap()){
 							commands.add(move |world: &mut ecs::World| {
 								let mut entity_mut = world.entity_mut(entity);
+								if let Some(mut transform) = entity_mut.get_mut::<bevy::prelude::Transform>(){
+									*transform = bevy::prelude::Transform::from_xyz(position.x as f32 / 10., position.y as f32 / 10., position.z as f32 / 10.);
+								}
+
 								if let Some(mut data) = entity_mut.get_mut::<tracker::TrackerData>(){
 									data.position = position;
 								}

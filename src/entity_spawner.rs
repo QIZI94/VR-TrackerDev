@@ -1,7 +1,7 @@
 use bevy::ecs::prelude::*;
 use bevy::ecs::system::CommandQueue;
 pub trait EntitySpawner{
-	/// Spawn entity defined by EntityBuilder implementation with all it's neceserry components and resources.
+	/// Spawn entity defined by EntitySpawner implementation with all it's necessary components and resources.
     ///
     /// # Arguments
     ///
@@ -22,9 +22,9 @@ pub trait EntitySpawner{
 
 }
 
-/// Helper function to be able to spawn entity from world without needing sperete implementation for it.
+/// Helper function to be able to spawn entity from world without needing separate implementation for it.
 /// This is done by creating temporary commands and commands queue and running spawn function implementation with commands
-///  and then immidiatly applying it to world.
+///  and then immediately applying it to world.
 /// 
 /// 
 /// # Arguments
@@ -39,5 +39,5 @@ pub fn spawn_from_world(world: &mut World, entity_builder: &dyn EntitySpawner ) 
 	entity
 }
 
-// usful function
+// useful function
 
